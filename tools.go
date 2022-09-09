@@ -40,7 +40,21 @@ type UploadedFile struct {
 	FileSize         int64
 }
 
-func (t *Tools) UploadedFiles(r *http.Request, uploadDir string, rename ...bool) ([]*UploadedFile, error) {
+func (t *Tools) UploadOneFile(r *http.Request, uploadDir string, rename ...bool) (*UploadedFile, error) {
+	renameFile := true
+	if len(rename) > 0 {
+		renameFile = rename[0]
+	}
+
+	files, err := t.UploadFiles(r, uploadDir, renameFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return files[0], nil
+}
+
+func (t *Tools) UploadFiles(r *http.Request, uploadDir string, rename ...bool) ([]*UploadedFile, error) {
 	renameFile := true
 	if len(rename) > 0 {
 		renameFile = rename[0]
@@ -90,6 +104,7 @@ func (t *Tools) UploadedFiles(r *http.Request, uploadDir string, rename ...bool)
 					return nil, errors.New("the uploaded file type is not permitted")
 				}
 
+				// back to start of file after reading buff
 				_, err = infile.Seek(0, 0)
 				if err != nil {
 					return nil, err
@@ -100,6 +115,8 @@ func (t *Tools) UploadedFiles(r *http.Request, uploadDir string, rename ...bool)
 				} else {
 					uploadedFile.NewFileName = hdr.Filename
 				}
+
+				uploadedFile.OriginalFileName = hdr.Filename
 
 				var outFile *os.File
 				defer outFile.Close()
